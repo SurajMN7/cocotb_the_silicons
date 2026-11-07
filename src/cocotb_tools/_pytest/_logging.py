@@ -41,14 +41,19 @@ def get_level(name: str) -> int:
     """
     return getattr(logging, name.upper(), 0)
 
+#The problem is that Python doesn't automatically know Cocotb's simulation time.
+#So we create a custom filter that adds this information to the log record.
 
-class SimContextFilter(Filter):
+class SimContextFilter(Filter):#we plan to reuse the Filter class and customise it
     """Attach information about simulation to log record using log filter."""
 
     def __init__(self) -> None:
         """Create new instance of simulation context filter."""
         self._is_simulation: bool = getattr(cocotb, "is_simulation", False)
+        #Does the Cocotb module have an attribute called is_simulation? If yes, give me its value. Otherwise, return False
 
+        #Because later, when retrieving simulation time, we first need to check whether we're actually running inside a simulation.
+    
     def filter(self, record: LogRecord) -> bool:
         """Attach information about simulation to log record."""
         if not hasattr(record, "sim_time"):
