@@ -1,1 +1,12 @@
+WHAT HAPPENS IN LOGGING.PY?
+-essentially customizing Python's logging system to make it simulation-aware.
+
+While Python knows things like:
+- What message was logged.
+- Which logger generated it.
+- Whether it's INFO, WARNING, ERROR, etc.
+Python doesn't inherently know the current hardware simulation time....Cocotb does.
+
+This code bridges the gap between Python's logging system and Cocotb's simulation-time system.
+
 
