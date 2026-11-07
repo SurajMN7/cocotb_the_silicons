@@ -8,26 +8,28 @@ from __future__ import annotations
 
 import logging
 from logging import (
-    Filter,
-    LogRecord,
-    getLogger,
-    getLogRecordFactory,
-    setLogRecordFactory,
+    Filter,             #A filter is an object that examines a log record,it can modify, allow, reject the rcord
+    LogRecord,          #This is the actual object representing a logging event.
+                        #Python internally creates a LogRecord everytime this is typed
+    getLogger,          #Gets the logger named "cocotb".
+    getLogRecordFactory,#Gets the function currently responsible for creating LogRecord objects.
+    setLogRecordFactory,#Allows us to install our own LogRecord creation function.
 )
 from typing import Callable
 
 from _pytest.logging import DEFAULT_LOG_FORMAT, LoggingPlugin
 from pytest import Config, Session, hookimpl
 
-import cocotb
-import cocotb.simtime
-from cocotb.simtime import get_sim_time
+import cocotb                        #Main Cocotb package
+import cocotb.simtime                #Simulation-time functionality.
+from cocotb.simtime import get_sim_time  #Retrieves the current simulation time.
 
-COCOTB_LOG_FORMAT: str = (
+COCOTB_LOG_FORMAT: str = (            
     "%(sim_time_str)8s%(sim_time_unit)s %(levelname)-8s %(name)s %(message)s"
 )
 
-
+# following converts a user-friendly logging-level name into the integer value Python's logging system understands
+#The function is small, but it acts as a bridge between user configuration and Python's logging API.
 def get_level(name: str) -> int:
     """Get log level based on provided name.
 
