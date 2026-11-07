@@ -53,10 +53,17 @@ class SimContextFilter(Filter):#we plan to reuse the Filter class and customise 
         #Does the Cocotb module have an attribute called is_simulation? If yes, give me its value. Otherwise, return False
 
         #Because later, when retrieving simulation time, we first need to check whether we're actually running inside a simulation.
-    
+
+        #The following method receives a log record.
     def filter(self, record: LogRecord) -> bool:
         """Attach information about simulation to log record."""
+        
         if not hasattr(record, "sim_time"):
+            #hasattr() checks whether an object has a particular attribute.
+
+            #hasattr(record, "sim_time")
+            #If this record does not already contain simulation time, add it.
+            
             sim_time: int | float | None = self._get_sim_time()
             record.sim_time_unit = cocotb.simtime.report_precision
 
