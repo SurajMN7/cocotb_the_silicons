@@ -10,3 +10,22 @@ Python doesn't inherently know the current hardware simulation time....Cocotb do
 This code bridges the gap between Python's logging system and Cocotb's simulation-time system.
 
 
+ARCHITECTURE
+System 1
+Python Logging
+
+Generates log messages and creates LogRecord objects.
+
+
+System 2
+Cocotb Simulation Time
+
+Knows the current simulation time and its reporting precision.
+
+
+System 3
+pytest Logging Plugin
+
+Handles where logs go: terminal, files, captured logs and test reports.
+
+
