@@ -43,3 +43,21 @@ Workflow of the code
 8. The custom log format displays simulation time along with the log level, logger name and message.
 
 
+
+
+
+
+Role of the code components understood so far
+- Imports: Bring in Python logging, Cocotb simulation-time functionality and pytest logging components.
+
+- COCOTB_LOG_FORMAT: Defines how log messages should be displayed, including simulation time, time unit, logging level, logger name and message.
+
+- get_level(): Converts logging-level names such as DEBUG, INFO and ERROR into their corresponding integer values required by Python's logging system.
+
+- SimContextFilter: Custom logging filter responsible for attaching simulation-time information to log records.
+
+- SimContextFilter.__init__(): Checks whether Cocotb is running in simulation mode and stores that information.
+
+- SimContextFilter.filter(): Checks whether simulation-time information already exists, retrieves it if necessary, attaches the time and unit, and allows the log record to continue.
+
+
