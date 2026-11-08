@@ -6,7 +6,7 @@ We plan to introduce a pytest_sessionfinish hook to finish what the pytest_sessi
 
 # Proposed Fix 2
 We planned to make changes to file named _logging which involve :
-1) Restoring cocotb's global factory modfifications removing
+1) Restoring cocotb's global factory modififications removing factory state changes made by filter
 2) Remove Cocotb's handler-level filters
 3) Preserve logging changes belonging to other components
 4) Avoid interfering with the existing regression logging management
