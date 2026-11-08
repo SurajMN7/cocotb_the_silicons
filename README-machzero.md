@@ -21,7 +21,7 @@ if getLogRecordFactory() is self._log_record_factory:    setLogRecordFactory(sel
 for handler in self._handlers:    handler.removeFilter(self._filter)
 
 
-
+# TestCases
 Test cases tested for in (tests_logging_cleanup.py) file:
 1) Check if original factory is restored after session as if not can cause errors to other plugins.
 2) Checking if cocotb only removes it own filters not any other filters belonging to other plugins.
