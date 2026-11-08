@@ -374,6 +374,8 @@ The logging modifications introduced by Cocotb are undone, while unrelated loggi
 
 ## Round 3: Testing, Validation and Edge Cases
 
+A new test file, tests/pytest_plugin/tests_logging_cleanup.py, has been added to verify logging cleanup. Run this test file first, followed by the main test_plugin test suite to ensure the logging cleanup issue is addressed before executing the remaining tests.
+
 ### 3.1 Testbench Overview
 
 The testbench verifies whether Cocotb correctly cleans up the changes it makes to Python's logging system after a pytest session finishes.
