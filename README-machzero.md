@@ -12,3 +12,11 @@ We planned to make changes to file named _logging which involve :
       4) Avoid interfering with the existing regression logging management
 
 
+self._original_log_record_factory = getLogRecordFactory()
+
+self._log_record_factory = log_record_factorysetLogRecordFactory(self._log_record_factory)
+
+if getLogRecordFactory() is self._log_record_factory:    setLogRecordFactory(self._original_log_record_factory)
+
+for handler in self._handlers:    handler.removeFilter(self._filter)
+
