@@ -82,6 +82,9 @@ class Logging:
 
         # Keep track of the handlers that receive Cocotb's filter.
         # This allows us to remove only our filter during cleanup.
+        #introduced a list to remember the four pytest handlers.
+        #remove Cocotb's filter from those exact handlers later.
+        
         self._handlers: list[logging.Handler] = []
 
         option = config.option
@@ -92,12 +95,15 @@ class Logging:
         # Save the factory that was active before Cocotb modified it.
         # Restoring this factory prevents Cocotb's global logging change
         # from affecting other pytest sessions or applications.
+        #Instead of just retrieving the existing factory into a temporary variable, we now save it as an instance attribute.
         self._original_log_record_factory: Callable[..., LogRecord] = (
             getLogRecordFactory()
         )
 
         # Preserve the existing factory's behavior and add simulation
         # context information to every newly created log record.
+        #The wrapper now explicitly uses the factory saved above
+        #To ensure Cocotb's custom factory wraps the original factory rather than accidentally wrapping itself or another later reference.
         create_log_record: Callable[..., LogRecord] = (
             self._original_log_record_factory
         )
@@ -109,8 +115,9 @@ class Logging:
 
         # Keep a reference to our factory so cleanup can check whether
         # it is still installed before attempting to restore the original.
-        self._log_record_factory = log_record_factory
-        setLogRecordFactory(self._log_record_factory)
+        
+        self._log_record_factory = log_record_factory#save the custom factory in self._log_record_factory
+        setLogRecordFactory(self._log_record_factory) #install that saved reference as Later, during cleanup, you need to identify whether the factory currently installed is actually Cocotb's factory.
 
         if option.gpi_log_level:
             getLogger("gpi").setLevel(get_level(option.gpi_log_level))
@@ -130,6 +137,10 @@ class Logging:
         if plugin:
             # Pytest uses four handlers for different logging destinations.
             # Track all four so Cocotb can remove its filter from each one.
+            #Previously, code had  attached the filter directly to each handler.
+            #Now, first save all four handler references and then attach the filter using a loop.
+            #So the cleanup method knows exactly which handlers to clean.
+            
             self._handlers = [
                 plugin.log_file_handler,
                 plugin.log_cli_handler,
@@ -140,17 +151,19 @@ class Logging:
             for handler in self._handlers:
                 handler.addFilter(self._filter)
 
+    #Cleanup
     @hookimpl
     def pytest_sessionfinish(
         self, session: Session, exitstatus: int
     ) -> None:
         """Restore logging state after the pytest session finishes."""
 
+        #Factory restoration
         # Restore the original factory only if Cocotb's factory is still
         # installed. Another plugin may have replaced it in the meantime.
         if getLogRecordFactory() is self._log_record_factory:
             setLogRecordFactory(self._original_log_record_factory)
 
         # Remove only Cocotb's filter, leaving other plugins' filters intact.
-        for handler in self._handlers:
+        for handler in self._handlers:#remove filters from handlers
             handler.removeFilter(self._filter)
