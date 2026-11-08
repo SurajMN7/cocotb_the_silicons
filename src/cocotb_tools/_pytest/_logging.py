@@ -1,3 +1,4 @@
+
 # Copyright cocotb contributors
 # Licensed under the Revised BSD License, see LICENSE for details.
 # SPDX-License-Identifier: BSD-3-Clause
@@ -8,28 +9,26 @@ from __future__ import annotations
 
 import logging
 from logging import (
-    Filter,             #A filter is an object that examines a log record,it can modify, allow, reject the rcord
-    LogRecord,          #This is the actual object representing a logging event.
-                        #Python internally creates a LogRecord everytime this is typed
-    getLogger,          #Gets the logger named "cocotb".
-    getLogRecordFactory,#Gets the function currently responsible for creating LogRecord objects.
-    setLogRecordFactory,#Allows us to install our own LogRecord creation function.
+    Filter,
+    LogRecord,
+    getLogger,
+    getLogRecordFactory,
+    setLogRecordFactory,
 )
 from typing import Callable
 
 from _pytest.logging import DEFAULT_LOG_FORMAT, LoggingPlugin
 from pytest import Config, Session, hookimpl
 
-import cocotb                        #Main Cocotb package
-import cocotb.simtime                #Simulation-time functionality.
-from cocotb.simtime import get_sim_time  #Retrieves the current simulation time.
+import cocotb
+import cocotb.simtime
+from cocotb.simtime import get_sim_time
 
-COCOTB_LOG_FORMAT: str = (            
+COCOTB_LOG_FORMAT: str = (
     "%(sim_time_str)8s%(sim_time_unit)s %(levelname)-8s %(name)s %(message)s"
 )
 
-# following converts a user-friendly logging-level name into the integer value Python's logging system understands
-#The function is small, but it acts as a bridge between user configuration and Python's logging API.
+
 def get_level(name: str) -> int:
     """Get log level based on provided name.
 
@@ -41,29 +40,17 @@ def get_level(name: str) -> int:
     """
     return getattr(logging, name.upper(), 0)
 
-#The problem is that Python doesn't automatically know Cocotb's simulation time.
-#So we create a custom filter that adds this information to the log record.
 
-class SimContextFilter(Filter):#we plan to reuse the Filter class and customise it
+class SimContextFilter(Filter):
     """Attach information about simulation to log record using log filter."""
 
     def __init__(self) -> None:
         """Create new instance of simulation context filter."""
         self._is_simulation: bool = getattr(cocotb, "is_simulation", False)
-        #Does the Cocotb module have an attribute called is_simulation? If yes, give me its value. Otherwise, return False
 
-        #Because later, when retrieving simulation time, we first need to check whether we're actually running inside a simulation.
-
-        #The following method receives a log record.
     def filter(self, record: LogRecord) -> bool:
         """Attach information about simulation to log record."""
-        
         if not hasattr(record, "sim_time"):
-            #hasattr() checks whether an object has a particular attribute.
-
-            #hasattr(record, "sim_time")
-            #If this record does not already contain simulation time, add it.
-            
             sim_time: int | float | None = self._get_sim_time()
             record.sim_time_unit = cocotb.simtime.report_precision
 
@@ -92,21 +79,38 @@ class Logging:
     def __init__(self, config: Config) -> None:
         """Create new instance of logging plugin."""
         self._filter: Filter = SimContextFilter()
+
+        # Keep track of the handlers that receive Cocotb's filter.
+        # This allows us to remove only our filter during cleanup.
+        self._handlers: list[logging.Handler] = []
+
         option = config.option
 
         if not option.log_format and config.getini("log_format") is DEFAULT_LOG_FORMAT:
             option.log_format = COCOTB_LOG_FORMAT
 
-        create_log_record: Callable[..., LogRecord] = getLogRecordFactory()
+        # Save the factory that was active before Cocotb modified it.
+        # Restoring this factory prevents Cocotb's global logging change
+        # from affecting other pytest sessions or applications.
+        self._original_log_record_factory: Callable[..., LogRecord] = (
+            getLogRecordFactory()
+        )
+
+        # Preserve the existing factory's behavior and add simulation
+        # context information to every newly created log record.
+        create_log_record: Callable[..., LogRecord] = (
+            self._original_log_record_factory
+        )
 
         def log_record_factory(*args: object, **kwargs: object) -> LogRecord:
             record: LogRecord = create_log_record(*args, **kwargs)
-
             self._filter.filter(record)
-
             return record
 
-        setLogRecordFactory(log_record_factory)
+        # Keep a reference to our factory so cleanup can check whether
+        # it is still installed before attempting to restore the original.
+        self._log_record_factory = log_record_factory
+        setLogRecordFactory(self._log_record_factory)
 
         if option.gpi_log_level:
             getLogger("gpi").setLevel(get_level(option.gpi_log_level))
@@ -116,17 +120,37 @@ class Logging:
 
     @hookimpl(tryfirst=True)
     def pytest_sessionstart(self, session: Session) -> None:
-        """Called after the :py:class:`pytest.Session` object has been created and before performing collection and
-        entering the run test loop.
+        """Called after the pytest.Session object has been created."""
 
-        Args:
-            session: The pytest session object.
-        """
         config: Config = session.config
-        plugin: LoggingPlugin | None = config.pluginmanager.get_plugin("logging-plugin")
+        plugin: LoggingPlugin | None = config.pluginmanager.get_plugin(
+            "logging-plugin"
+        )
 
         if plugin:
-            plugin.log_file_handler.addFilter(self._filter)
-            plugin.log_cli_handler.addFilter(self._filter)
-            plugin.caplog_handler.addFilter(self._filter)
-            plugin.report_handler.addFilter(self._filter)
+            # Pytest uses four handlers for different logging destinations.
+            # Track all four so Cocotb can remove its filter from each one.
+            self._handlers = [
+                plugin.log_file_handler,
+                plugin.log_cli_handler,
+                plugin.caplog_handler,
+                plugin.report_handler,
+            ]
+
+            for handler in self._handlers:
+                handler.addFilter(self._filter)
+
+    @hookimpl
+    def pytest_sessionfinish(
+        self, session: Session, exitstatus: int
+    ) -> None:
+        """Restore logging state after the pytest session finishes."""
+
+        # Restore the original factory only if Cocotb's factory is still
+        # installed. Another plugin may have replaced it in the meantime.
+        if getLogRecordFactory() is self._log_record_factory:
+            setLogRecordFactory(self._original_log_record_factory)
+
+        # Remove only Cocotb's filter, leaving other plugins' filters intact.
+        for handler in self._handlers:
+            handler.removeFilter(self._filter)
