@@ -103,7 +103,7 @@ The filter is attached to all four handlers so that simulation metadata is avail
 
 However, these handlers belong to pytest's logging infrastructure. Cocotb attaches its filter to them but does not own the handlers themselves.
 
-**Important distinction:** Cocotb owns the filter it introduces, but pytest owns the handlers.
+**Important distinction:** Cocotb owns the filter it introduces, but pytest owns the handlers. 
 
 This distinction influenced our implementation. We needed to remove Cocotb's filter without closing, replacing, or interfering with pytest's handlers or other plugins' filters.
 
