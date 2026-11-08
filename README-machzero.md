@@ -5,3 +5,10 @@ As mentioned in the open issue #5352 , given here: https://github.com/cocotb/coc
 We plan to introduce a pytest_sessionfinish hook to finish what the pytest_sessionstart hook started. During startup, cocotb uses it's own custom logging handlers and a LogRecord factory instead of Python's own. During teardown, all of cocotb's filters from all four handlers and safely restore the original LogRecord factory. That should not cause any more issues in regards to lingering filters or logs.
 
 # Proposed Fix 2
+We planned to make changes to file named _logging which involve :
+      1) Restoring cocotb's global factory modfifications removing
+      2) Remove Cocotb's handler-level filters
+      3) Preserve logging changes belonging to other components
+      4) Avoid interfering with the existing regression logging management
+
+
